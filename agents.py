@@ -10,7 +10,15 @@ from tools import web_search, scrape_url
 
 @lru_cache(maxsize=1)
 def get_llm():
-    return ChatMistralAI(model="mistral-small-2506")
+    # Mistral can return HTTP 429 when several agent stages run close together.
+    # Let the client retry transient failures with exponential backoff.
+    return ChatMistralAI(
+        model="mistral-small-2506",
+        max_retries=5,
+        timeout=60,
+        max_tokens=1200,
+        temperature=0.2,
+    )
 
 
 def build_search_agent():
@@ -28,8 +36,13 @@ def build_reader_agent():
 
 
 writer_prompt = ChatPromptTemplate.from_messages([
-    ("system", "You are an expert research writer. Write clear, structured and insightful reports."),
-    ("human", """Write a detailed research report on the topic below.
+    (
+        "system",
+        "You are an expert research writer. Write clear, structured and insightful reports."
+    ),
+    (
+        "human",
+        """Write a detailed research report on the topic below.
 
 Topic: {topic}
 
@@ -42,13 +55,19 @@ Structure the report as:
 - Conclusion
 - Sources (list all URLs found in the research)
 
-Be detailed, factual and professional."""),
+Be detailed, factual and professional."""
+    ),
 ])
 
 
 critic_prompt = ChatPromptTemplate.from_messages([
-    ("system", "You are a sharp and constructive research critic. Be honest and specific."),
-    ("human", """Review the research report below and evaluate it strictly.
+    (
+        "system",
+        "You are a sharp and constructive research critic. Be honest and specific."
+    ),
+    (
+        "human",
+        """Review the research report below and evaluate it strictly.
 
 Report:
 {report}
@@ -66,7 +85,8 @@ Areas to Improve:
 - ...
 
 One line verdict:
-..."""),
+..."""
+    ),
 ])
 
 
