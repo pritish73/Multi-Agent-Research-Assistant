@@ -1,9 +1,14 @@
 import html
+import os
+
 from fastapi import FastAPI, Form
 from fastapi.responses import HTMLResponse
-from agents import build_reader_agent, build_search_agent, writer_chain, critic_chain
+
+from agents import build_reader_agent, build_search_agent, run_writer, run_critic
+
 
 app = FastAPI(title="Multi-Agent Research Assistant")
+
 
 PAGE = """
 <!doctype html>
@@ -33,44 +38,84 @@ h1{margin-bottom:8px}.muted{color:#9aa5bd}
 </body></html>
 """
 
+
 @app.get("/", response_class=HTMLResponse)
 def home():
     return PAGE.format(topic="", result="")
 
+
+@app.get("/health")
+def health():
+    return {
+        "status": "ok",
+        "mistral_key_configured": bool(os.getenv("MISTRAL_API_KEY")),
+        "tavily_key_configured": bool(os.getenv("TAVILY_API_KEY")),
+    }
+
+
 @app.post("/", response_class=HTMLResponse)
 def research(topic: str = Form(...)):
     topic = topic.strip()
+
     if not topic:
-        return PAGE.format(topic="", result="<div class='card'>Enter a research topic.</div>")
+        return PAGE.format(
+            topic="",
+            result="<div class='card'>Enter a research topic.</div>"
+        )
 
     try:
+        if not os.getenv("MISTRAL_API_KEY"):
+            raise RuntimeError(
+                "MISTRAL_API_KEY is not configured. Add it to your Vercel Environment Variables."
+            )
+
+        if not os.getenv("TAVILY_API_KEY"):
+            raise RuntimeError(
+                "TAVILY_API_KEY is not configured. Add it to your Vercel Environment Variables."
+            )
+
         search_agent = build_search_agent()
         search_result = search_agent.invoke({
-            "messages": [("user", f"Find recent, reliable and detailed information about: {topic}")]
+            "messages": [
+                ("user", f"Find recent, reliable and detailed information about: {topic}")
+            ]
         })
         search_text = search_result["messages"][-1].content
 
         reader_agent = build_reader_agent()
         reader_result = reader_agent.invoke({
-            "messages": [("user",
+            "messages": [(
+                "user",
                 f"Based on these search results about '{topic}', pick the most relevant URL "
                 f"and scrape it for deeper content.\n\nSearch Results:\n{search_text[:8000]}"
             )]
         })
         scraped = reader_result["messages"][-1].content
 
-        combined = f"SEARCH RESULTS:\n{search_text}\n\nDETAILED SCRAPED CONTENT:\n{scraped}"
-        report = writer_chain.invoke({"topic": topic, "research": combined})
-        feedback = critic_chain.invoke({"report": report})
+        combined = (
+            f"SEARCH RESULTS:\n{search_text}\n\n"
+            f"DETAILED SCRAPED CONTENT:\n{scraped}"
+        )
+
+        report = run_writer(topic, combined)
+        feedback = run_critic(report)
 
         result = f"""
         <div class="card"><h2>Final Report</h2><pre>{html.escape(report)}</pre></div>
         <div class="card"><h2>Critic Feedback</h2><pre>{html.escape(feedback)}</pre></div>
         <div class="card"><h2>Search Results</h2><pre>{html.escape(search_text)}</pre></div>
         """
-        return PAGE.format(topic=html.escape(topic), result=result)
+
+        return PAGE.format(
+            topic=html.escape(topic),
+            result=result
+        )
+
     except Exception as e:
         return PAGE.format(
             topic=html.escape(topic),
-            result=f"<div class='card'><h2>Deployment error</h2><pre>{html.escape(str(e))}</pre></div>"
+            result=(
+                "<div class='card'><h2>Runtime error</h2>"
+                f"<pre>{html.escape(str(e))}</pre></div>"
+            )
         )
