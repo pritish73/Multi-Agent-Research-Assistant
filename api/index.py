@@ -17,12 +17,12 @@ PAGE = """
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Multi-Agent Research Assistant</title>
 <style>
-body{font-family:Arial,sans-serif;max-width:1000px;margin:40px auto;padding:0 20px;background:#0b0f19;color:#eee}
-.card{background:#151b2b;border:1px solid #29334d;border-radius:16px;padding:24px;margin:18px 0}
-input{width:70%;padding:14px;border-radius:10px;border:1px solid #39445f;background:#0f1421;color:#fff}
-button{padding:14px 20px;border:0;border-radius:10px;background:#6d5dfc;color:white;font-weight:700;cursor:pointer}
-pre{white-space:pre-wrap;line-height:1.55}
-h1{margin-bottom:8px}.muted{color:#9aa5bd}
+body{{font-family:Arial,sans-serif;max-width:1000px;margin:40px auto;padding:0 20px;background:#0b0f19;color:#eee}}
+.card{{background:#151b2b;border:1px solid #29334d;border-radius:16px;padding:24px;margin:18px 0}}
+input{{width:70%;padding:14px;border-radius:10px;border:1px solid #39445f;background:#0f1421;color:#fff}}
+button{{padding:14px 20px;border:0;border-radius:10px;background:#6d5dfc;color:white;font-weight:700;cursor:pointer}}
+pre{{white-space:pre-wrap;line-height:1.55}}
+h1{{margin-bottom:8px}}.muted{{color:#9aa5bd}}
 </style>
 </head>
 <body>
