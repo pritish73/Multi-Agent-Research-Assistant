@@ -53,6 +53,20 @@ def health():
     }
 
 
+def friendly_error(error: Exception) -> str:
+    message = str(error)
+
+    if "429" in message or "rate limit" in message.lower() or "rate_limited" in message.lower():
+        return (
+            "Mistral API is temporarily rate-limited. "
+            "The app automatically retries transient rate-limit errors. "
+            "If the limit has been exhausted, wait for the Mistral limit to reset "
+            "and try again."
+        )
+
+    return message
+
+
 @app.post("/", response_class=HTMLResponse)
 def research(topic: str = Form(...)):
     topic = topic.strip()
@@ -116,6 +130,6 @@ def research(topic: str = Form(...)):
             topic=html.escape(topic),
             result=(
                 "<div class='card'><h2>Runtime error</h2>"
-                f"<pre>{html.escape(str(e))}</pre></div>"
+                f"<pre>{html.escape(friendly_error(e))}</pre></div>"
             )
         )
